@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Table, Container, Navbar } from 'react-bootstrap';
+import { Table, Container } from 'react-bootstrap';
 
 function KioskTable() {
   const [kiosks, setKiosks] = useState({});
+  const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
 
@@ -21,7 +22,17 @@ function KioskTable() {
       });
 
     const ws = new WebSocket("ws://127.0.0.1:8000/ws/data/");
+
+    ws.onopen = () => {
+        console.log("WebSocket connected");
+        setIsConnected(true);
+    };
     
+    ws.onclose = () => {
+        console.log("WebSocket disconnected");
+        setIsConnected(false);
+    };
+
     ws.onmessage = (event) => {
       const message = JSON.parse(event.data);
       
@@ -40,11 +51,11 @@ function KioskTable() {
 
   return (
     <div>
-      <Navbar bg="dark" variant="dark">
-        <Container>
-          <Navbar.Brand href="#home">Queue Management Dashboard</Navbar.Brand>
-        </Container>
-      </Navbar>
+      <div className="w-100">
+        <div
+          className={`h-1 ${isConnected ? 'bg-success' : 'bg-danger'}`} style={{ height: '4px' }}
+        />
+      </div>
       <Container className="mt-5 pb-5">
         <Table striped bordered hover>
           <thead>
@@ -63,11 +74,6 @@ function KioskTable() {
           </tbody>
         </Table>
       </Container>
-      <Navbar fixed="bottom" bg="dark" variant="dark">
-        <Container>
-          <Navbar.Brand href="#home">© 2024 ESSI Integrated Technologies Pvt Ltd</Navbar.Brand>
-        </Container>
-      </Navbar>
     </div>
   );
 }
