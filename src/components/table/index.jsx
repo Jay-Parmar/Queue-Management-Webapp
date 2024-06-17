@@ -4,18 +4,24 @@ import { Table, Container } from 'react-bootstrap';
 
 function KioskTable() {
   const [kiosks, setKiosks] = useState({});
+  const [kioskInfo, setKioskInfo] = useState({});
   const [isConnected, setIsConnected] = useState(false);
+  const [totalSolved, setTotalSolved] = useState(0);
 
   useEffect(() => {
 
     axios.get('http://127.0.0.1:8000/kiosk/')
       .then(response => {
         const initialKiosks = {};
+        const initialKioskInfo = {};
         console.log(":::response", response);
         response.data.forEach(kiosk => {
-          initialKiosks[kiosk.id] = "";
+          initialKiosks[kiosk.id] = kiosk.last_ticket_assigned.id || "";
+          initialKioskInfo[kiosk.id] = kiosk;
+          setTotalSolved(kiosk.tickets_resolved_today);
         });
         setKiosks(initialKiosks);
+        setKioskInfo(initialKioskInfo);
       })
       .catch(error => {
         console.error('Error fetching kiosk data:', error);
@@ -36,14 +42,15 @@ function KioskTable() {
     ws.onmessage = (event) => {
       const message = JSON.parse(event.data);
       
-      const { kiosk, ticket, status } = message.response;
+      const { kiosk, ticket, status, total_solved } = message.response;
       if (status==='assigned') {
         setKiosks(prevKiosks => ({
             ...prevKiosks,
             [kiosk]: ticket
         }));
       }
-      
+
+      setTotalSolved(total_solved);
     };
 
     return () => ws.close();
@@ -57,20 +64,36 @@ function KioskTable() {
         />
       </div>
       <Container className="mt-5 pb-5">
-        <Table striped bordered hover>
+        <Table striped bordered hover style={{ width: 'auto', minWidth: '100%', padding: '20px' }}>
+        <thead>
+            <tr>
+                {Object.entries(kiosks).map(([kiosk, ticket], index) => (
+                    <th key={kiosk} style={{ textAlign: 'center' }}>
+                        <div>Kiosk / Counter</div>
+                        <div style={{ fontSize: '2em' }}>{kioskInfo[kiosk].body}</div>
+                    </th>
+                ))}
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+              {Object.entries(kiosks).map(([kiosk, ticket], index) => (
+                <td key={kiosk} style={{ textAlign: 'center', minHeight: '50px', fontSize: '6em' }}>{ticket || "N/A"}</td>
+              ))}
+            </tr>
+          </tbody>
+        </Table>
+        {/* New Table for Displaying Tickets Solved Today */}
+        <Table striped bordered hover style={{ width: 'auto', minWidth: '100%', padding: '20px', marginTop: '20px' }}>
           <thead>
             <tr>
-              <th>Kiosk Number</th>
-              <th>Ticket Assigned</th>
+              <th style={{ textAlign: 'center' }}>Tickets Solved Today</th>
             </tr>
           </thead>
           <tbody>
-            {Object.entries(kiosks).map(([kiosk, ticket]) => (
-              <tr key={kiosk}>
-                <td>{kiosk}</td>
-                <td>{ticket}</td>
-              </tr>
-            ))}
+            <tr>
+              <td style={{ textAlign: 'center', fontSize: '2em' }}>{totalSolved}</td>
+            </tr>
           </tbody>
         </Table>
       </Container>
